@@ -341,15 +341,15 @@ AFND *AFNDCierraLTransicion(AFND * p_afnd){
 
 void AFNDADot(AFND * p_afnd){
     assert(p_afnd != NULL);
-    
+
     int i,j,k;
     FILE* f;
     char*nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd->nombre)+5));
     strcpy(nombre, p_afnd->nombre);
     strcat(nombre, ".dot");
-    
+
     f = fopen(nombre, "w");
-    
+
     fprintf(f, "digraph %s { rankdir=LR;\n", p_afnd->nombre);
     fprintf(f, "\t_invisible [style=\"invis\"];\n");
     for(i = 0; i < p_afnd->num_estados; i++){
@@ -358,11 +358,11 @@ void AFNDADot(AFND * p_afnd){
             fprintf(f, " [penwidth=\"2\"];\n");
         else
             fprintf(f, ";\n");
-        
+
         if(estadoTipo(p_afnd->estados[i]) == INICIAL || estadoTipo(p_afnd->estados[i]) == INICIAL_Y_FINAL)
             fprintf(f, "\t_invisible -> %s ;\n",estadoNombre(p_afnd->estados[i]));
     }
-    
+
      for(i = 0; i < p_afnd->num_estados; i++){
         for(j = 0; j < p_afnd->num_simbolos; j++){
             for(k = 0; k < p_afnd->num_estados; k++){
@@ -372,20 +372,20 @@ void AFNDADot(AFND * p_afnd){
             }
         }
     }
-    
+
      for(i = 0; i <  p_afnd->num_estados; i++){
         for(j = 0; j <  p_afnd->num_estados; j++)
             if(p_afnd->transicionlambda->relacion[i][j] == 1)
                 fprintf(f, "\t%s -> %s [label=\"&lambda;\"];\n", estadoNombre(p_afnd->estados[i]), estadoNombre(p_afnd->estados[j]) );
-            
-        
+
+
     }
-    
+
     fprintf(f, "}");
     free(nombre);
     fclose(f);
-    
-    
+
+
 }
 
 
@@ -399,184 +399,206 @@ void AFNDADot(AFND * p_afnd){
 /*****************ESTAS DEBERIAN ESTAE BIEN*******************/
 AFND * AFND1ODeSimbolo( char * simbolo){
     assert(simbolos != NULL);
-    
+
     AFND* p_afnd = NULL;
-    
+
     /* Creamos el automata */
     p_afnd = AFNDNuevo(strcat("anfd_", simbolo), 2, 1);
     assert(p_afnd != NULL);
-    
+
     /* Insertamos el simbolo de la ER */
     p_afnd = FNDInsertaSimbolo(p_afnd, simbolo);
-    
+
     /* Creamos los estados para aceptar la ER */
     p_afnd = AFNDInsertaEstado(p_afnd,"q0",INICIAL);
     p_afnd = AFNDInsertaEstado(p_afnd,"qf",FINAL);
-    
+
     /* Transicion entre los estados con el simbolo proporcionado */
     p_afnd = AFNDInsertaTransicion(p_afnd, "q0", simbolo, "qf");
-    
+
     return p_afnd;
 }
 
 
 AFND * AFND1ODeLambda(){
-    
+
     AFND* p_afnd = NULL;
-    
+
     /* Creamos el automata */
-    p_afnd = AFNDNuevo(strcat("anfd_", "lambda"), 2, 0);
+    p_afnd = AFNDNuevo(strcat("anfd_", "lambda"), 1, 0);
     assert(p_afnd != NULL);
-    
-    
+
     /* Creamos los estados para aceptar la ER */
-    p_afnd = AFNDInsertaEstado(p_afnd,"q0",INICIAL);
-    p_afnd = AFNDInsertaEstado(p_afnd,"qf",FINAL);
-    
-    /* Transicion lambda entre los estados */
-    p_afnd = AFND * AFNDInsertaLTransicion(p_afnd , "q0", "qf");
-    
-    
+    p_afnd = AFNDInsertaEstado(p_afnd,"q0",INICIAL_Y_FINAL);
+
     return p_afnd;
 }
 
 
 AFND * AFND1ODeVacio(){
-    
+
     AFND* p_afnd = NULL;
-    
+
     /* Creamos el automata */
     p_afnd = AFNDNuevo(strcat("anfd_", "vacio"), 2, 0);
     assert(p_afnd != NULL);
 
-    
+
     /* Creamos los estados para aceptar la ER */
     p_afnd = AFNDInsertaEstado(p_afnd,"q0",INICIAL);
     p_afnd = AFNDInsertaEstado(p_afnd,"qf",FINAL);
-    
-    
+
+
     return p_afnd;
 }
-/****************A PARTIR DE AQUI TODO HAY QUE REVISAR LOS PROBLEMAS********************/
+
+
 /**********************************************************************************/
 
+/* Funcion que enlaza el nuevo estado inicial o final con los viejos mediante lambda*/
+AFND * AFND1OUneLTransicion(AFND * p_afnd_destino, char * nombre_nuevo_estado_inicial, char * nombre_nuevo_estado_final){
 
-/***** FUNCIONES PARA FACILITAR VISUALIZACION *****/
+    p_afnd_destino = AFNDInsertaEstado(p_afnd_destino, nombre_nuevo_estado_final, NORMAL);
+    p_afp_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_nuevo_estado_inicial, nombre_nuevo_estado_final);
 
-/* Funcion que enlaza el nuevo estado inicial o final con los viejos */
-void AFNDInicialFinalLambda(AFND* p_afnd, char * estado_ini, char* estado_fin){
-    
-    
-    p_afnd = AFNDInsertaEstado(p_afnd, estado_fin, NORMAL);
-    p_afnd = AFNDInsertaLTransicion(p_afnd, estado_ini, estado_fin);
-    
-            
+    return p_afnd_destino;
 }
-/* El auxiliar para suplir la diferencia de numero de simbolos entre un automata y otro */
-void AFNDCopiaSimbolos(AFND* nuevo, AFND* copia, int aux){
-    
+
+/*Falta comprobar que no se repitan*/
+AFND * AFND1OInsertaSimbolosAFND(AFND * p_afnd_destino, AFND * p_afnd_origen){
+
     int i;
-    
-    for(i = 0; i < copia->num_simbolos; i++)
-        nuevo = AFNDInsertaSimbolo(nuevo, alfabetoSimboloEn(copia->alfabeto, i));
-} 
 
-/* El auxiliar para suplir la diferencia de numero de estados entre un automata y otro */
-/* EL PROBLEMA ES QUE SE PASA EL NOMBRE DE LOS ESTADOS, NO LOS INDICES */
-void AFNDCopiaTransiciones(AFND* nuevo, AFND* copia, int pos_estado_i, int aux_estados, int aux_simbolos){
-    int j, k;
-    
-    for(j = 0; j < copia->num_simbolos; j++)
-        for(k = 0; k < copia->num_estados; k++)
-            if((copia->ftransicion[i][j])[k] == 1)
-                nuevo = AFNDInsertaTransicion(nuevo, estadoNombre(copia->estados[i]) + aux_estados, alfabetoSimboloEn(copia->alfabeto, j),estadoNombre(copia->estados[k]));
+    for(i = 0; i < p_afnd_origen->num_simbolos; i++)
+        p_afnd_destino = AFNDInsertaSimbolo(p_afnd_destino, alfabetoSimboloEn(p_afnd_origen->alfabeto, i));
+
+      return p_afnd_destino;
+}
+
+AFND * AFND1OInsertaEstadosTransicionesAFND(AFND * p_afnd_destino, AFND * p_afnd_origen, char * prefijo_estados, int offset_estados){
+
+  int i,j,k;
+
+  AFNDInsertaEstado(p_afnd_destino, "q0", INICIAL);
+  AFNDInsertaEstado(p_afnd_destino, "qf", FINAL);
+
+  /* Estados y transiciones del primer automata */
+  for(i = 0; i < p_afnd_origen->num_estados; i++){
+      if(estadoTipo(p_afnd_origen->estados[i]) == INICIAL){
+        AFND1OUneLTransicion(p_afnd_destino, "q0", strcat(estadoNombre(p_afnd_origen->estados[i]), prefijo_estados));
+      }
+
+
+      else if(p_afnd_origen->estados[i]) == FINAL){
+        AFND1OUneLTransicion(p_afnd_destino, "qf", strcat(estadoNombre(p_afnd_origen->estados[i]), prefijo_estados));
+      }
+
+      else if(p_afnd_origen->estados[i]) == INICIAL_Y_FINAL){
+        AFND1OUneLTransicion(p_afnd_destino, "q0", strcat(estadoNombre(p_afnd_origen->estados[i]), prefijo_estados));
+        AFND1OUneLTransicion(p_afnd_destino, "qf", strcat(estadoNombre(p_afnd_origen->estados[i]), prefijo_estados));
+      }
+
+      else
+          p_afnd_destino = AFNDInsertaEstado(p_afnd_destino, strcat(estadoNombre(p_afnd_origen->estados[i]), prefijo_estados), estadoTipo(p_afnd_origen->estados[i]));
+  }
+
+  for(i = 0; i < p_afnd_origen->num_estados; i++)
+      for(j = 0; j < p_afnd_origen->num_simbolos; j++)
+        for(k = 0; k < p_afnd_origen->num_estados; k++)
+          if((p_afnd_origen->ftransicion[i][j])[k] == 1)
+              p_afnd_destino = AFNDInsertaTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i+offset_estados]), alfabetoSimboloEn(p_afnd_origen->alfabeto, j),estadoNombre(p_afnd_destino->estados[k+offset_estados]));
+
+    /*Faltan trans lambda*/
 
 }
+
+
+
 
 
 /**************************************************/
 
 /*** HABRIA QUE VER COMO HACERLA MEJOR ***/
 AFND * AFNDAAFND1O(AFND * p_afnd){
-    
+
     assert(p_afnd != NULL);
     AFND* nuevo_inicial = NULL;
     AFND* nuevo_final = NULL;
-    
+
     int i, j, k, contador_ini = 0, contador_fin = 0;
-    
+
     /* Comprobamos que solo tenga un estado inicial y uno final (diferentes) */
     for(i = 0; i < p_afnd->num_estados; i++){
-        
+
         /*** Debemos suponer que el automata recibido no posee estado INICIAL_Y_FINAL? ***/
 
         if(estadoTipo(p_afnd->estados[i][j]) == INICIAL)
             contador_ini++;
-            
+
         if(estadoTipo(p_afnd->estados[i][j]) == FINAL)
             contador_fin++;
     }
-    
+
     /* Si hay mas de un estado inicial y final, creamos los dos nuevos*/
     if(contador_ini > 0 && contador_fin > 0){
-        
+
         /* Estados + 2 para el nuevo estado inicial y final*/
         nuevo_inicial = AFNDNuevo(p_afnd->nombre, p_afnd->num_estados+2, p_afnd->num_simbolos);
         assert(nuevo_inicial != NULL);
-        
+
         /* Insercion de los simbolos */
         AFNDCopiaSimbolos(nuevo_inicial, p_afnd);
-        
+
         nuevo_inicial = AFNDInsertaEstado(nuevo_inicial, "ini_new", INICIAL);
         nuevo_inicial = AFNDInsertaEstado(nuevo_inicial, "end_new", FINAL);
-        
-        /* Cambiamos el tipo de los antiguos estados iniciales a NORMAL, insercion 
+
+        /* Cambiamos el tipo de los antiguos estados iniciales a NORMAL, insercion
         de estados */
         for(i = 0; i < p_afnd->num_estados; i++){
             if(estadoTipo(p_afnd->estados[i]) == INICIAL)
                 AFNDInicialFinalLambda(nuevo_inicial, "ini_new", estadoNombre(p_afnd->estados[i]));
-            
+
             else
                  nuevo_inicial = AFNDInsertaEstado(nuevo_inicial, estadoNombre(p_afnd->estados[i]), estadoTipo(p_afnd->estados[i]));
             /* Insercion de transiciones */
             AFNDCopiaTransiciones(nuevo_inicial, p_afnd, i);
         }
-        
+
     }
-    
-    /* Nos aseguramos que solo haya un estado final (tenieno en cuenta si ya 
+
+    /* Nos aseguramos que solo haya un estado final (tenieno en cuenta si ya
     habiamos hecho cambios con respecto al estado inicial) */
     if(contador_fin > 0){
         if(nuevo_inicial == NULL){
             nuevo_final = AFNDNuevo(p_afnd->nombre, p_afnd->num_estados+1, p_afnd->num_simbolos);
             assert(nuevo_final != NULL);
-            
+
             /* Insercion de los simbolos */
             AFNDCopiaSimbolos(nuevo_final, p_afnd);
 
-            /* Cambiamos el tipo de los antiguos estados iniciales a NORMAL, insercion 
+            /* Cambiamos el tipo de los antiguos estados iniciales a NORMAL, insercion
             de estados*/
             nuevo_final = AFNDInsertaEstado(nuevo_final, "end_new", FINAL);
             for(i = 0; i < p_afnd->num_estados; i++){
                 if(estadoTipo(p_afnd->estados[i]) == FINAL)
                     AFNDInicialFinalLambda(nuevo_final, "end_new", estadoNombre(p_afnd->estados[i]));
-                
+
                 else
                     nuevo_final = AFNDInsertaEstado(nuevo_final, estadoNombre(p_afnd->estados[i]), estadoTipo(p_afnd->estados[i]));
                 /* Inserciones de transiciones */
                 AFNDCopiaTransiciones(nuevo_final, p_afnd, i);
 
             }
-            
+
         }
-        
+
         else{
             nuevo_final = AFNDNuevo(nuevo_inicial->nombre, nuevo_inicial->num_estados+1, nuevo_inicial->num_simbolos);
             assert(nuevo_final != NULL);
-            
+
             /* Insercion de los simbolos */
             AFNDCopiaSimbolos(nuevo_final, nuevo_inicial);
-            
+
             nuevo_final = AFNDInsertaEstado(nuevo_final, "end_new", FINAL);
             for(i = 0; i < nuevo_inicial->num_estados; i++){
                 if(estadoTipo(nuevo_inicial->estados[i]) == FINAL)
@@ -584,19 +606,19 @@ AFND * AFNDAAFND1O(AFND * p_afnd){
 
                 else
                      nuevo_inicial = AFNDInsertaEstado(nuevo_final, estadoNombre(nuevo_inicial->estados[i]), estadoTipo(nuevo_inicial->estados[i]));
-            
+
                 /* Inserciones de transiciones */
                 AFNDCopiaTransiciones(nuevo_final, nuevo_inicial, i);
 
             }
-            
+
         }
-        
+
 
     }
-    
+
     /***  Es necesario eliminar el automata de entrada? ***/
-    
+
     if(nuevo_inicial == NULL){
         if(nuevo_final == NULL)
             return p_afnd;
@@ -616,64 +638,64 @@ AFND * AFNDAAFND1O(AFND * p_afnd){
             return nuevo_final;
         }
     }
-    
+
     return NULL;
 }
 
 
 AFND * AFND1OUne(AFND * p_afnd1O_1, AFND * p_afnd1O_2);{
-    
+
     assert(p_afnd1O_1 != NULL);
     assert(p_afnd1O_2 != NULL);
-    
+
     int i, j, k, num_estados, num_simbolos;
     AFND* afnd_une = NULL;
     //+4 para meter _U_ entre medias
-    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4)); 
+    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4));
     strcpy(nombre, p_afnd1O_1->nombre);
     strcat(nombre, "_U_");
     strcat(nombre, p_afnd1O_2->nombre);
-    
+
     //+2 para añadir el nuevo inicial y el nuevo final
     num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
     num_simbolos = p_afnd1O_1->num_simbolos + p_afnd1O_2->num_simbolos;
-    
+
     afnd_une = AFNDNuevo(nombre, num_estados, num_simbolos);
-    
+
     /* Insercion de simbolos */
     AFNDCopiaSimbolos(afnd_une, p_afnd1O_1);
     AFNDCopiaSimbolos(afnd_une, p_afnd1O_2);
-    
+
     /* Creacion de nuevos estado inicial y final */
     AFNDInsertaEstado(afnd_une, "ini_new", INICIAL);
     AFNDInsertaEstado(afnd_une, "end_new", FINAL);
-    
+
     /* Estados y transiciones del primer automata */
     for(i = 0; i < p_afnd1O_1->num_estados; i++){
         if(estadoTipo(p_afnd1O_1->estados[i]) == INICIAL)
             AFNDInicialFinalLambda(afnd_une, "ini_new", estadoNombre(p_afnd->estados[i]));
 
-        
+
         else if(p_afnd1O_1->estados[i]) == FINAL)
             AFNDInicialFinalLambda(afnd_une, "end_new", estadoNombre(p_afnd->estados[i]));
-       
+
         else
             afnd_une = AFNDInsertaEstado(afnd_une, estadoNombre(p_afnd1O_1->estados[i]), estadoTipo(p_afnd1O_1->estados[i]));
 
-        /* Insertamos las transiciones */ 
+        /* Insertamos las transiciones */
         /** ESTO HAY QUE REVISARLO, AL SER DOS AUTOMATAS EN UNO **/
         AFNDCopiaTransiciones(afnd_une, p_afnd1O_1, i);
 
-        
+
     }
-    
+
     /* Estados y transiciones del segundo automata */
     for(i = 0; i < p_afnd1O_2->num_estados; i++){
         if(estadoTipo(p_afnd1O_2->estados[i]) == INICIAL){
             afnd_une = AFNDInsertaEstado(afnd_une, estadoNombre(p_afnd1O_2->estados[i]), NORMAL);
             afnd_une = AFNDInsertaLTransicion(afnd_une, "ini_new", estadoNombre(p_afnd1O_2->estados[i]));
         }
-        
+
         else if(p_afnd1O_2->estados[i]) == FINAL){
             afnd_une = AFNDInsertaEstado(afnd_une, estadoNombre(p_afnd1O_2->estados[i]), NORMAL);
             afnd_une = AFNDInsertaLTransicion(afnd_une, "ini_new", estadoNombre(p_afnd1O_2->estados[i]));
@@ -681,16 +703,16 @@ AFND * AFND1OUne(AFND * p_afnd1O_1, AFND * p_afnd1O_2);{
         else
             afnd_une = AFNDInsertaEstado(afnd_une, estadoNombre(p_afnd1O_2->estados[i]), estadoTipo(p_afnd1O_2->estados[i]));
 
-        /* Insertamos las transiciones */ 
+        /* Insertamos las transiciones */
         for(j = 0; j < p_afnd1O_2->num_simbolos; j++)
             for(k = 0; k < p_afnd1O_2->num_estados; k++)
                 if((p_afnd1O_2->ftransicion[i][j])[k] == 1)
                     afnd_une = AFNDInsertaTransicion(afnd_une, estadoNombre(p_afnd1O_2->estados[i]), alfabetoSimboloEn(p_afnd1O_2->alfabeto, j),estadoNombre(p_afnd1O_2->estados[k]));
     }
-    
-    
+
+
     free(nombre);
     /*** Es necesario eliminar los automatas recibidos? ***/
-    
-    
+
+
 }

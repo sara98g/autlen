@@ -79,8 +79,7 @@ AFND * AFND1OUne(AFND * p_afnd1O_1, AFND * p_afnd1O_2);
 
 void AFNDInicialFinalLambda(AFND* p_afnd, char * estado_ini, char* estado_fin);
 
-void AFNDCopiaSimbolos(AFND* nuevo, AFND* copia, int aux);
-
+AFND * AFND1OInsertaSimbolosAFND(AFND * p_afnd_destino, AFND * p_afnd_origen);
 void AFNDCopiaTransiciones(AFND* nuevo, AFND* copia, int pos_estado_i, int aux_estados, int aux_simbolos);
 
 #endif
