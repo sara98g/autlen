@@ -77,9 +77,15 @@ AFND * AFNDAAFND1O(AFND * p_afnd);
 
 AFND * AFND1OUne(AFND * p_afnd1O_1, AFND * p_afnd1O_2);
 
-void AFNDInicialFinalLambda(AFND* p_afnd, char * estado_ini, char* estado_fin);
+AFND * AFND1OConcatena(AFND * p_afnd_origen1, AFND * p_afnd_origen2);
+
+AFND * AFND1OEstrella(AFND * p_afnd_origen);
+
+AFND * AFND1OUneLTransicion(AFND * p_afnd_destino ,AFND * p_afnd_origen, char * nombre_estado_i, char * nombre_estado_f, int offset_estados);
 
 AFND * AFND1OInsertaSimbolosAFND(AFND * p_afnd_destino, AFND * p_afnd_origen);
-void AFNDCopiaTransiciones(AFND* nuevo, AFND* copia, int pos_estado_i, int aux_estados, int aux_simbolos);
+
+AFND * AFND1OInsertaEstadosTransicionesAFND(AFND * p_afnd_destino, AFND * p_afnd_origen, char * prefijo_estados, int offset_estados);
+
 
 #endif
