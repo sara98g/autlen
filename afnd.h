@@ -87,5 +87,9 @@ AFND * AFND1OInsertaSimbolosAFND(AFND * p_afnd_destino, AFND * p_afnd_origen);
 
 AFND * AFND1OInsertaEstadosTransicionesAFND(AFND * p_afnd_destino, AFND * p_afnd_origen, char * prefijo_estados, int offset_estados);
 
+AFND * AFND1OConcatenaLTransicion(AFND * p_afnd_destino, AFND * p_afnd_1 ,AFND * p_afnd_2, char * nombre_estado_i, char * nombre_estado_f);
+
+void AFND10_CalculaNumSimbolos(AFND* p_afnd_1, AFND* p_afnd_2, int* num);
+
 
 #endif

@@ -341,15 +341,15 @@ AFND *AFNDCierraLTransicion(AFND * p_afnd){
 
 void AFNDADot(AFND * p_afnd){
     assert(p_afnd != NULL);
-    
+
     int i,j,k;
     FILE* f;
     char*nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd->nombre)+5));
     strcpy(nombre, p_afnd->nombre);
     strcat(nombre, ".dot");
-    
+
     f = fopen(nombre, "w");
-    
+
     fprintf(f, "digraph %s { rankdir=LR;\n", p_afnd->nombre);
     fprintf(f, "\t_invisible [style=\"invis\"];\n");
     for(i = 0; i < p_afnd->num_estados; i++){
@@ -358,11 +358,11 @@ void AFNDADot(AFND * p_afnd){
             fprintf(f, " [penwidth=\"2\"];\n");
         else
             fprintf(f, ";\n");
-        
+
         if(estadoTipo(p_afnd->estados[i]) == INICIAL || estadoTipo(p_afnd->estados[i]) == INICIAL_Y_FINAL)
             fprintf(f, "\t_invisible -> %s ;\n",estadoNombre(p_afnd->estados[i]));
     }
-    
+
      for(i = 0; i < p_afnd->num_estados; i++){
         for(j = 0; j < p_afnd->num_simbolos; j++){
             for(k = 0; k < p_afnd->num_estados; k++){
@@ -372,20 +372,20 @@ void AFNDADot(AFND * p_afnd){
             }
         }
     }
-    
+
      for(i = 0; i <  p_afnd->num_estados; i++){
         for(j = 0; j <  p_afnd->num_estados; j++)
             if(p_afnd->transicionlambda->relacion[i][j] == 1)
                 fprintf(f, "\t%s -> %s [label=\"&lambda;\"];\n", estadoNombre(p_afnd->estados[i]), estadoNombre(p_afnd->estados[j]) );
-            
-        
+
+
     }
-    
+
     fprintf(f, "}");
     free(nombre);
     fclose(f);
-    
-    
+
+
 }
 
 
@@ -411,7 +411,7 @@ AFND * AFND1ODeSimbolo( char * simbolo){
 
     /* Transicion entre los estados con el simbolo proporcionado */
     p_afnd = AFNDInsertaTransicion(p_afnd, "q0", simbolo, "qf");
-    
+
     free(nombre);
     return p_afnd;
 }
@@ -421,7 +421,7 @@ AFND * AFND1ODeLambda(){
 
     AFND* p_afnd = NULL;
     char nombre[] = {"afnd_lambda"};
-    
+
     /* Creamos el automata */
     p_afnd = AFNDNuevo(nombre, 1, 0);
     assert(p_afnd != NULL);
@@ -455,21 +455,80 @@ AFND * AFND1ODeVacio(){
 AFND * AFND1OUneLTransicion(AFND * p_afnd_destino ,AFND * p_afnd_origen, char * nombre_estado_i, char * nombre_estado_f, int offset_estados){
 
     int i;
-    
+
     for(i = 0; i < p_afnd_origen->num_estados; i++){
         if(estadoTipo(p_afnd_origen->estados[i]) == INICIAL)
             p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, estadoNombre(p_afnd_destino->estados[i+offset_estados]));
-    
+
         else if(estadoTipo(p_afnd_origen->estados[i]) == FINAL)
             p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i+offset_estados]), nombre_estado_f);
 
         else if(estadoTipo(p_afnd_origen->estados[i]) == INICIAL_Y_FINAL){
             p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, estadoNombre(p_afnd_destino->estados[i+offset_estados]));
             p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i+offset_estados]), nombre_estado_f);
-            
+
         }
     }
-    
+    AFNDCierraLTransicion(p_afnd_destino);
+
+    return p_afnd_destino;
+}
+
+/**/
+AFND * AFND1OConcatenaLTransicion(AFND * p_afnd_destino, AFND * p_afnd_1 ,AFND * p_afnd_2, char * nombre_estado_i, char * nombre_estado_f){
+    assert(p_afnd_1 != NULL);
+    assert(p_afnd_2 != NULL);
+
+    int i;
+    int offset_estados = p_afnd_1->num_estados;
+
+
+    for(i=0 ; i<p_afnd_1->num_estados ; i++){
+      int es_aux =estadoTipo(p_afnd_1->estados[i]);
+      if(es_aux==INICIAL || es_aux==INICIAL_Y_FINAL)
+        p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, estadoNombre(p_afnd_destino->estados[i]));
+      else if(estadoTipo(p_afnd_1->estados[i])==FINAL || estadoTipo(p_afnd_1->estados[i])==INICIAL_Y_FINAL ){
+        //Estado final del primer automata -> estado inicial del segundo automata
+        int j;
+        //Buscamos el estado inicial y final del segundo automata para enlazarlo con el primero y el estado final
+        for(j = 0 ; j < p_afnd_2->num_estados ; j++){
+
+            if(estadoTipo(p_afnd_2->estados[j]) == INICIAL || estadoTipo(p_afnd_2->estados[j]) == INICIAL_Y_FINAL)
+                p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i]) , estadoNombre(p_afnd_destino->estados[j + offset_estados]) );
+
+            else if(estadoTipo(p_afnd_2->estados[j]) == FINAL || estadoTipo(p_afnd_2->estados[j]) == INICIAL_Y_FINAL)
+                p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[j+offset_estados]),  nombre_estado_f);
+        }
+      }
+
+    }
+    AFNDCierraLTransicion(p_afnd_destino);
+    return p_afnd_destino;
+
+}
+
+AFND * AFND1OEstrellaLTransicion(AFND * p_afnd_destino, AFND * p_afnd_origen, char * nombre_estado_i, char * nombre_estado_f ){
+    int i;
+
+
+    p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, nombre_estado_f);
+    p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_f, nombre_estado_i);
+
+    for(i = 0; i < p_afnd_origen->num_estados; i++){
+        if(estadoTipo(p_afnd_origen->estados[i]) == INICIAL)
+            p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, estadoNombre(p_afnd_destino->estados[i]));
+
+        else if(estadoTipo(p_afnd_origen->estados[i]) == FINAL)
+            p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i]), nombre_estado_f);
+
+        else if(estadoTipo(p_afnd_origen->estados[i]) == INICIAL_Y_FINAL){
+            p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, nombre_estado_i, estadoNombre(p_afnd_destino->estados[i]));
+            p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino, estadoNombre(p_afnd_destino->estados[i]), nombre_estado_f);
+
+        }
+    }
+
+    AFNDCierraLTransicion(p_afnd_destino);
 
     return p_afnd_destino;
 }
@@ -493,14 +552,16 @@ AFND * AFND1OInsertaEstadosTransicionesAFND(AFND * p_afnd_destino, AFND * p_afnd
   int i,j,k;
 
 
-  
   for(i = 0; i < p_afnd_origen->num_estados; i++){
-      
+
     char *nombre = NULL;
     nombre = (char*)malloc(sizeof(char)*(strlen(estadoNombre(p_afnd_origen->estados[i]))+strlen(prefijo_estados)+1));
+
     strcpy(nombre, estadoNombre(p_afnd_origen->estados[i]));
     strcat(nombre, prefijo_estados);
     p_afnd_destino = AFNDInsertaEstado(p_afnd_destino, nombre, NORMAL);
+    estadoImprime(stdout, p_afnd_origen->estados[i]);
+
     free(nombre);
   }
 
@@ -515,17 +576,17 @@ AFND * AFND1OInsertaEstadosTransicionesAFND(AFND * p_afnd_destino, AFND * p_afnd
             if(p_afnd_origen->transicionlambda->relacion[i][j] == 1){
                 p_afnd_destino = AFNDInsertaLTransicion(p_afnd_destino , estadoNombre(p_afnd_destino->estados[i+offset_estados]), estadoNombre(p_afnd_destino->estados[j+offset_estados]));
             }
-    
-    return p_afnd_destino; 
+
+    return p_afnd_destino;
 
 }
 
 
 AFND * AFNDAAFND1O(AFND * p_afnd){
-    
+
     assert(p_afnd != NULL);
     AFND* nuevo = NULL;
-    
+
     /* Estados + 2 para el nuevo estado inicial y final*/
     char *nombre = NULL;
     nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd->nombre)+8));
@@ -533,17 +594,17 @@ AFND * AFNDAAFND1O(AFND * p_afnd){
     strcat(nombre, "_AFND10");
     nuevo = AFNDNuevo(nombre, p_afnd->num_estados+2, p_afnd->num_simbolos);
     assert(nuevo != NULL);
-    
-    
+
+
     /* Insercion de los simbolos */
     nuevo = AFND1OInsertaSimbolosAFND(nuevo, p_afnd);
-    
+
     /* Insercion estados y transiciones */
     nuevo = AFND1OInsertaEstadosTransicionesAFND(nuevo, p_afnd, "_AFND10", 0);
-    
+
     AFNDInsertaEstado(nuevo, "q0", INICIAL);
     AFNDInsertaEstado(nuevo, "qf", FINAL);
-    
+
     nuevo = AFND1OUneLTransicion(nuevo, p_afnd, "q0", "qf", 0);
 
 	AFNDCierraLTransicion(nuevo);
@@ -554,144 +615,154 @@ AFND * AFNDAAFND1O(AFND * p_afnd){
 
 
 AFND * AFND1OUne(AFND * p_afnd1O_1, AFND * p_afnd1O_2){
-    
+
     assert(p_afnd1O_1 != NULL);
     assert(p_afnd1O_2 != NULL);
-    
+
     int  num_estados, num_simbolos;
     AFND* afnd_une = NULL;
     //+4 para meter _U_ entre medias
-    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4)); 
+    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4));
     strcpy(nombre, p_afnd1O_1->nombre);
     strcat(nombre, "_U_");
     strcat(nombre, p_afnd1O_2->nombre);
     //+2 para meter _ entre medias
-    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+2)); 
-    strcpy(estado1, "_");
+    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+4));
+    strcpy(estado1, "_1_");
     strcat(estado1, p_afnd1O_1->nombre);
-    char *estado2 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_2->nombre)+2)); 
-    strcpy(estado2, "_");
+    char *estado2 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_2->nombre)+4));
+    strcpy(estado2, "_2_");
     strcat(estado2, p_afnd1O_2->nombre);
-    
+
     //+2 para añadir el nuevo inicial y el nuevo final
     num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
     num_simbolos = p_afnd1O_1->num_simbolos + p_afnd1O_2->num_simbolos;
-    
+    AFND10_CalculaNumSimbolos(p_afnd1O_1, p_afnd1O_2, &num_simbolos);
+
     afnd_une = AFNDNuevo(nombre, num_estados, num_simbolos);
-    
+
     /* Insercion de los simbolos */
-    afnd_une = AFND1OInsertaSimbolosAFND(afnd_une, p_afnd1O_1);  
-    afnd_une = AFND1OInsertaSimbolosAFND(afnd_une, p_afnd1O_2);  
-    
+    afnd_une = AFND1OInsertaSimbolosAFND(afnd_une, p_afnd1O_1);
+    afnd_une = AFND1OInsertaSimbolosAFND(afnd_une, p_afnd1O_2);
+
     /* Insercion estados y transiciones */
-    
+
     afnd_une = AFND1OInsertaEstadosTransicionesAFND(afnd_une, p_afnd1O_1, estado1, 0);
     afnd_une = AFND1OInsertaEstadosTransicionesAFND(afnd_une, p_afnd1O_2, estado2, p_afnd1O_1->num_estados);
 
-    
+
     AFNDInsertaEstado(afnd_une, "q0", INICIAL);
     AFNDInsertaEstado(afnd_une, "qf", FINAL);
-    
+
     afnd_une = AFND1OUneLTransicion(afnd_une, p_afnd1O_1, "q0", "qf", 0);
     afnd_une = AFND1OUneLTransicion(afnd_une, p_afnd1O_2, "q0", "qf", p_afnd1O_1->num_estados);
 
-    
-    
+
+
     free(nombre);
     free(estado1);
     free(estado2);
-    
+
     return afnd_une;
 }
 
 AFND * AFND1OConcatena(AFND * p_afnd1O_1, AFND * p_afnd1O_2){
-    
+
     assert(p_afnd1O_1 != NULL);
     assert(p_afnd1O_2 != NULL);
-    
+
     int  num_estados, num_simbolos;
     AFND* afnd_con = NULL;
     //+4 para meter _C_ entre medias
-    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4)); 
+    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+strlen(p_afnd1O_2->nombre)+4));
     strcpy(nombre, p_afnd1O_1->nombre);
     strcat(nombre, "_C_");
     strcat(nombre, p_afnd1O_2->nombre);
     //+2 para meter _ entre medias
-    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+2)); 
-    strcpy(estado1, "_");
+    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_1->nombre)+4));
+    strcpy(estado1, "_1_");
     strcat(estado1, p_afnd1O_1->nombre);
-    char *estado2 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_2->nombre)+2)); 
-    strcpy(estado2, "_");
+    char *estado2 = (char*)malloc(sizeof(char)*(strlen(p_afnd1O_2->nombre)+4));
+    strcpy(estado2, "_2_");
     strcat(estado2, p_afnd1O_2->nombre);
-    
+
     //+2 para añadir el nuevo inicial y el nuevo final
     num_estados = p_afnd1O_1->num_estados + p_afnd1O_2->num_estados + 2;
     num_simbolos = p_afnd1O_1->num_simbolos + p_afnd1O_2->num_simbolos;
-    
+    AFND10_CalculaNumSimbolos(p_afnd1O_1, p_afnd1O_2, &num_simbolos);
+
+
     afnd_con = AFNDNuevo(nombre, num_estados, num_simbolos);
-    
+
     /* Insercion de los simbolos */
-    afnd_con = AFND1OInsertaSimbolosAFND(afnd_con, p_afnd1O_1);  
-    afnd_con = AFND1OInsertaSimbolosAFND(afnd_con, p_afnd1O_2);  
-    
+    afnd_con = AFND1OInsertaSimbolosAFND(afnd_con, p_afnd1O_1);
+    afnd_con = AFND1OInsertaSimbolosAFND(afnd_con, p_afnd1O_2);
+
     /* Insercion estados y transiciones */
-    
+
     afnd_con = AFND1OInsertaEstadosTransicionesAFND(afnd_con, p_afnd1O_1, estado1, 0);
+
     afnd_con = AFND1OInsertaEstadosTransicionesAFND(afnd_con, p_afnd1O_2, estado2, p_afnd1O_1->num_estados);
 
-    
+
     AFNDInsertaEstado(afnd_con, "q0", INICIAL);
     AFNDInsertaEstado(afnd_con, "qf", FINAL);
-    
-    // Algo parecido a AFNDUneLTransicion, pero para concatenar:
-    //afnd_con = AFND1OConcatenaLTransicion(afnd_une, p_afnd1O_1, "q0", p_afnd10_2->estadoInicial, 0);
-    //afnd_con = AFND1OConcatenaLTransicion(afnd_une, p_afnd1O_2, p_afnd10_1->estadoFinal, "qf", p_afnd1O_1->num_estados);
-    
-    
+
+    afnd_con = AFND1OConcatenaLTransicion(afnd_con, p_afnd1O_1, p_afnd1O_2, "q0", "qf");
+
     free(nombre);
     free(estado1);
     free(estado2);
-    
+
     return afnd_con;
 }
 
 AFND * AFND1OEstrella(AFND * p_afnd_origen){
-    
+
     assert(p_afnd_origen != NULL);
-    
+
     int  num_estados;
     AFND* afnd_est = NULL;
     //+3 para meter _E al final
-    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd_origen->nombre)+3)); 
+    char *nombre = (char*)malloc(sizeof(char)*(strlen(p_afnd_origen->nombre)+3));
     strcpy(nombre, p_afnd_origen->nombre);
     strcat(nombre, "_E");
     //+2 para meter _ entre medias
-    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd_origen->nombre)+2)); 
+    char *estado1 = (char*)malloc(sizeof(char)*(strlen(p_afnd_origen->nombre)+2));
     strcpy(estado1, "_");
     strcat(estado1, p_afnd_origen->nombre);
-    
+
     //+2 para añadir el nuevo inicial y el nuevo final
     num_estados = p_afnd_origen->num_estados + 2;
-    
+
     afnd_est = AFNDNuevo(nombre, num_estados, p_afnd_origen->num_simbolos);
-    
+
     /* Insercion de los simbolos */
-    afnd_est = AFND1OInsertaSimbolosAFND(afnd_est, p_afnd_origen); 
-    
+    afnd_est = AFND1OInsertaSimbolosAFND(afnd_est, p_afnd_origen);
+
     /* Insercion estados y transiciones */
-    
+
     afnd_est = AFND1OInsertaEstadosTransicionesAFND(afnd_est, p_afnd_origen, estado1, 0);
 
-    
+
     AFNDInsertaEstado(afnd_est, "q0", INICIAL);
     AFNDInsertaEstado(afnd_est, "qf", FINAL);
-    
-    // Algo parecido a AFNDUneLTransicion, pero para añadiendo trans lambda entre ini y fin nuevos:
-    //afnd_est = AFND1OConcatenaLTransicion(afnd_une, p_afnd_origen, "q0", "qf", 0);
-    
-    
+
+    afnd_est = AFND1OEstrellaLTransicion(afnd_est, p_afnd_origen, "q0", "qf");
+
+
     free(nombre);
     free(estado1);
-    
+
     return afnd_est;
+}
+
+
+void AFND10_CalculaNumSimbolos(AFND* p_afnd_1, AFND* p_afnd_2, int* num){
+  int i, j;
+  for(i = 0; i < p_afnd_1->num_simbolos; i++)
+    for(j = 0; j < p_afnd_2->num_simbolos; j++)
+      if(strcmp(alfabetoSimboloEn(p_afnd_1->alfabeto, i),alfabetoSimboloEn(p_afnd_2->alfabeto, j)) == 0)
+        (*num)--;
+
 }
